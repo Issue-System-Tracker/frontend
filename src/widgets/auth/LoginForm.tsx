@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { submitLogin } from "@/entities/user";
+import { submitLogin } from "@/features/auth";
 import TextInput from "@/shared/ui/inputs/TextInput";
 
 export default function LoginForm() {

@@ -1,4 +1,4 @@
-import Button from "@/shared/ui/Buttons/button";
+import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
 import DateFooter from "@/widgets/footers/DateFooter";
 
 export default function Home() {
@@ -14,20 +14,27 @@ export default function Home() {
         </p>
 
         <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6">
-          <Button
-            text="Войти"
+          <UniversalButton
             href="/login"
             variant="primary"
-            style={{ backgroundColor: "#000", color: "#fff" }}
-            className="w-full sm:w-auto hover:bg-gray-800"
-          />
-          <Button
-            text="Регистрация"
+            backgroundColor="#000"
+            textColor="#fff"
+            hoverBackgroundColor="#374151"
+            className="w-full sm:w-auto"
+          >
+            Войти
+          </UniversalButton>
+          <UniversalButton
             href="/register"
-            variant="secondary"
-            style={{ borderColor: "#000", color: "#000", backgroundColor: "transparent" }}
-            className="w-full sm:w-auto hover:bg-black/10"
-          />
+            variant="outline"
+            backgroundColor="transparent"
+            textColor="#000"
+            borderColor="#000"
+            hoverBackgroundColor="#00000010"
+            className="w-full sm:w-auto"
+          >
+            Регистрация
+          </UniversalButton>
         </div>
       </div>
 

@@ -2,6 +2,8 @@
 
 import { create } from "zustand";
 import { AuthUser } from "./auth";
+import { StorageService } from "@/shared/services/storageService";
+import { logger } from "@/shared/utils/logger";
 
 type AuthState = {
   user: AuthUser | null;
@@ -16,31 +18,35 @@ export const useAuthStore = create<AuthState>((set) => ({
   hydrateFromStorage: () => {
     if (typeof window === "undefined") return;
     try {
-      const token = localStorage.getItem("accessToken");
-      const refreshToken = localStorage.getItem("refreshToken") || undefined;
-      const rolesRaw = localStorage.getItem("roles");
-      const roles: string[] = rolesRaw ? JSON.parse(rolesRaw) : [];
+      const token = StorageService.getAccessToken();
+      const refreshToken = StorageService.getRefreshToken();
+      const roles = StorageService.getRoles();
 
-      if (!token) return;
+      if (!token) {
+        logger.info("Токен не найден в localStorage");
+        return;
+      }
+      
       const payloadBase64 = token.split(".")[1];
       const payloadJson = JSON.parse(atob(payloadBase64));
       const email: string = payloadJson.sub || "";
       const name: string = payloadJson.fullName || payloadJson.name || (email ? email.split("@")[0] : "");
 
       set({
-        user: { email, name, roles, accessToken: token, refreshToken },
+        user: { email, name, roles, accessToken: token, refreshToken: refreshToken || undefined },
       });
-    } catch {
-      // ignore
+      
+      logger.success("Пользователь загружен из localStorage", { email, name });
+    } catch (error) {
+      logger.error("Ошибка загрузки пользователя из localStorage", error);
     }
   },
   logout: () => {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("roles");
+      StorageService.clearTokens();
     }
     set({ user: null });
+    logger.info("Пользователь вышел из системы");
   },
 }));
 

@@ -2,7 +2,8 @@
 export interface ProjectBaseUser {
   id: string;
   email: string;
-  name: string;
+  fullName: string;
+  roles: string[];
 }
 
 // Типы данных проектов

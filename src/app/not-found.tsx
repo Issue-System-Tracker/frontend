@@ -1,4 +1,4 @@
-import Button from "@/shared/ui/Buttons/button";
+import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
 import DateFooter from "@/widgets/footers/DateFooter";
 
 export default function NotFoundPage() {
@@ -8,13 +8,15 @@ export default function NotFoundPage() {
         <h1 className="text-5xl font-bold tracking-tight">4 0 4</h1>
 
         <div className="flex justify-center gap-3 mt-6">
-          <Button
-            text="На главную"
+          <UniversalButton
             href="/"
             variant="primary"
-            style={{ backgroundColor: "#000", color: "#fff" }}
-            className="hover:bg-gray-800"
-          />
+            backgroundColor="#000"
+            textColor="#fff"
+            hoverBackgroundColor="#374151"
+          >
+            На главную
+          </UniversalButton>
         </div>
       </div>
 

@@ -1,5 +1,13 @@
-import RegisterPage from "@/features/auth/RegisterPage";
+import { RegisterForm } from "@/widgets/auth";
+import AuthLayout from "@/shared/ui/layouts/AuthLayout";
 
-export default function Page() {
-  return <RegisterPage />;
+export default function RegisterPage() {
+  return (
+    <AuthLayout
+      title="Регистрация"
+      form={<RegisterForm />}
+      linkText="Уже есть аккаунт?"
+      linkHref="/login"
+    />
+  );
 }

@@ -1,23 +1,21 @@
-// Базовые типы для связанных сущностей (избегаем циклических зависимостей)
-export interface IssueBaseUser {
+// Типы задач
+export type IssueType = "BUG" | "FEATURE";
+export type IssueStatus = "OPEN" | "IN_PROGRESS" | "TESTING" | "DONE";
+export type Priority = "HIGH" | "MEDIUM" | "LOW";
+
+// Базовые типы для связанных сущностей
+export interface IssueUser {
   id: string;
   email: string;
-  name: string;
+  fullName: string;
 }
 
-export interface IssueBaseSprint {
-  id: number;
-  name: string;
-  startDate: string;
-  endDate: string;
-}
-
-export interface IssueBaseProject {
+export interface IssueSprint {
   id: number;
   name: string;
 }
 
-// Типы данных задач
+// Основная модель задачи
 export interface Issue {
   id: number;
   title: string;
@@ -25,37 +23,15 @@ export interface Issue {
   type: IssueType;
   status: IssueStatus;
   priority: Priority;
-  author: IssueBaseUser;
-  assignee?: IssueBaseUser;
+  assignee?: IssueUser;
+  creator: IssueUser;
   startDate?: string;
   endDate?: string;
-  sprint?: IssueBaseSprint;
-  project: IssueBaseProject;
-}
-
-// Типы задач
-export enum IssueType {
-  BUG = 'BUG',
-  FEATURE = 'FEATURE'
-}
-
-// Статусы задач
-export enum IssueStatus {
-  OPEN = 'OPEN',
-  IN_PROGRESS = 'IN_PROGRESS',
-  TESTING = 'TESTING',
-  DONE = 'DONE'
-}
-
-// Приоритеты задач
-export enum Priority {
-  HIGH = 'HIGH',
-  MEDIUM = 'MEDIUM',
-  LOW = 'LOW'
+  sprint?: IssueSprint;
 }
 
 // Запросы для работы с задачами
-export interface CreatingIssueRequest {
+export interface CreateIssueRequest {
   title: string;
   description: string;
   type: IssueType;
@@ -65,40 +41,32 @@ export interface CreatingIssueRequest {
   sprintId?: number;
 }
 
-export interface EditingIssueRequest {
-  title?: string;
-  description?: string;
-  type?: IssueType;
+export interface UpdateIssueRequest {
+  title: string;
+  description: string;
+  type: IssueType;
   status?: IssueStatus;
   priority?: Priority;
-  assigneeId?: number;
+  assigneeEmail?: string;
   startDate?: string;
   endDate?: string;
   sprintId?: number;
 }
 
-export interface FilteringIssuesRequest {
+export interface SearchIssuesRequest {
   status?: IssueStatus;
-  type?: IssueType;
-  priority?: Priority;
-  assigneeId?: number;
+  assigneeEmail?: string;
   sprintId?: number;
-  projectId?: number;
 }
 
-// Ответы для задач
-export interface IssueChangesResponse {
+// История изменений задачи
+export interface IssueHistory {
+  id: number;
   issueId: number;
-  changes: IssueChange[];
-}
-
-export interface IssueChange {
-  field: string;
+  changedBy: IssueUser;
+  changeType: string;
   oldValue: string;
   newValue: string;
-  changedAt: string;
-  changedBy: string;
+  changeDate: string;
+  description: string;
 }
-
-// Импорты удалены для избежания циклических зависимостей
-// Используются базовые типы BaseUser, BaseSprint, BaseProject

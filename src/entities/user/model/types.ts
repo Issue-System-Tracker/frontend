@@ -20,7 +20,6 @@ export interface RegisterRequest {
   email: string;
   password: string;
   fullName: string;
-  position: string;
 }
 
 export interface LoginRequest {
@@ -49,6 +48,4 @@ export interface RegisterFormValues {
   password: string;
   passwordConfirm: string;
   fullName: string;
-  position: string;
-  location?: number | "";
 }

@@ -1,31 +1,27 @@
-// Базовые типы для связанных сущностей (избегаем циклических зависимостей)
-export interface SprintBaseProject {
+// Типы спринтов
+export interface SprintProject {
   id: number;
   name: string;
 }
 
-// Типы данных спринтов
+// Основная модель спринта
 export interface Sprint {
   id: number;
   name: string;
   startDate: string;
   endDate: string;
-  project: SprintBaseProject;
+  project: SprintProject;
 }
 
 // Запросы для работы со спринтами
-export interface SprintRequest {
+export interface CreateSprintRequest {
   name: string;
   startDate: string;
   endDate: string;
-  projectId: number;
 }
 
-export interface EditingSprintRequest {
-  name?: string;
-  startDate?: string;
-  endDate?: string;
+export interface UpdateSprintRequest {
+  name: string;
+  startDate: string;
+  endDate: string;
 }
-
-// Импорты удалены для избежания циклических зависимостей
-// Используется базовый тип BaseProject

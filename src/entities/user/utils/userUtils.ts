@@ -46,7 +46,7 @@ export function getUserEmail(user: User | null): string {
  * Валидация формы регистрации
  */
 export function validateRegisterForm(values: RegisterFormValues): string | null {
-  const { email, password, passwordConfirm, fullName, position } = values;
+  const { email, password, passwordConfirm, fullName } = values;
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email)) return "Введите корректный email";
@@ -55,8 +55,6 @@ export function validateRegisterForm(values: RegisterFormValues): string | null 
   if (password !== passwordConfirm) return "Пароли не совпадают";
   if (!fullName || fullName.length < 5 || fullName.length > 100)
     return "Полное имя должно быть от 5 до 100 символов";
-  if (!position || position.length > 100)
-    return "Должность не может быть пустой и должна быть ≤ 100 символов";
 
   return null;
 }
