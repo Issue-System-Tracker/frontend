@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Project } from "@/entities/project";
 import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
+import { TIME_INTERVALS } from "@/shared/constants";
 
 interface ProjectSliderProps {
   projects: Project[];
@@ -18,14 +19,14 @@ export default function ProjectSlider({ projects, onSelectProject }: ProjectSlid
     if (isTransitioning) return;
     setIsTransitioning(true);
     setCurrentIndex((prev) => (prev - 1 + projects.length) % projects.length);
-    setTimeout(() => setIsTransitioning(false), 500);
+    setTimeout(() => setIsTransitioning(false), TIME_INTERVALS.ANIMATION_TIMEOUT);
   }, [isTransitioning, projects.length]);
 
   const goToNext = useCallback(() => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     setCurrentIndex((prev) => (prev + 1) % projects.length);
-    setTimeout(() => setIsTransitioning(false), 500);
+    setTimeout(() => setIsTransitioning(false), TIME_INTERVALS.ANIMATION_TIMEOUT);
   }, [isTransitioning, projects.length]);
 
   // Автопрокрутка
@@ -33,7 +34,7 @@ export default function ProjectSlider({ projects, onSelectProject }: ProjectSlid
     if (projects.length <= 1) return;
     const interval = setInterval(() => {
       goToNext();
-    }, 5000);
+    }, TIME_INTERVALS.AUTO_SLIDER_INTERVAL);
     return () => clearInterval(interval);
   }, [projects.length, goToNext]);
 

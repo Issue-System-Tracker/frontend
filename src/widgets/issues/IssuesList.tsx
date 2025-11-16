@@ -4,16 +4,17 @@ import { useProjectStore } from '@/entities/project';
 import { useIssueStore } from '@/entities/issue';
 import { Issue, IssueStatus, IssueType, Priority } from '@/entities/issue';
 import { Plus, Bug, Zap, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { ISSUE_STATUS, ISSUE_TYPE, PRIORITY } from '@/shared/constants';
 
 const getStatusIcon = (status: IssueStatus) => {
   switch (status) {
-    case "OPEN":
+    case ISSUE_STATUS.OPEN:
       return <AlertCircle size={16} className="text-red-500" />;
-    case "IN_PROGRESS":
+    case ISSUE_STATUS.IN_PROGRESS:
       return <Clock size={16} className="text-yellow-500" />;
-    case "TESTING":
+    case ISSUE_STATUS.TESTING:
       return <Clock size={16} className="text-blue-500" />;
-    case "DONE":
+    case ISSUE_STATUS.DONE:
       return <CheckCircle size={16} className="text-green-500" />;
     default:
       return <AlertCircle size={16} />;
@@ -22,9 +23,9 @@ const getStatusIcon = (status: IssueStatus) => {
 
 const getTypeIcon = (type: IssueType) => {
   switch (type) {
-    case "BUG":
+    case ISSUE_TYPE.BUG:
       return <Bug size={16} className="text-red-500" />;
-    case "FEATURE":
+    case ISSUE_TYPE.FEATURE:
       return <Zap size={16} className="text-blue-500" />;
     default:
       return <Zap size={16} />;
@@ -33,11 +34,11 @@ const getTypeIcon = (type: IssueType) => {
 
 const getPriorityColor = (priority: Priority) => {
   switch (priority) {
-    case "HIGH":
+    case PRIORITY.HIGH:
       return 'text-red-600 bg-red-100';
-    case "MEDIUM":
+    case PRIORITY.MEDIUM:
       return 'text-yellow-600 bg-yellow-100';
-    case "LOW":
+    case PRIORITY.LOW:
       return 'text-green-600 bg-green-100';
     default:
       return 'text-gray-600 bg-gray-100';
@@ -46,13 +47,13 @@ const getPriorityColor = (priority: Priority) => {
 
 const getStatusColor = (status: IssueStatus) => {
   switch (status) {
-    case "OPEN":
+    case ISSUE_STATUS.OPEN:
       return 'text-red-600 bg-red-100';
-    case "IN_PROGRESS":
+    case ISSUE_STATUS.IN_PROGRESS:
       return 'text-yellow-600 bg-yellow-100';
-    case "TESTING":
+    case ISSUE_STATUS.TESTING:
       return 'text-blue-600 bg-blue-100';
-    case "DONE":
+    case ISSUE_STATUS.DONE:
       return 'text-green-600 bg-green-100';
     default:
       return 'text-gray-600 bg-gray-100';

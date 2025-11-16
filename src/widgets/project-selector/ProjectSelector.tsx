@@ -5,6 +5,7 @@ import { fetchProjects } from '@/features/project-management';
 import { ChevronDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Project } from '@/entities/project';
+import { logger } from '@/shared/utils/logger';
 
 export default function ProjectSelector() {
   const { selectedProject, setSelectedProject } = useProjectStore();
@@ -18,7 +19,7 @@ export default function ProjectSelector() {
         const projectsData = await fetchProjects();
         setProjects(projectsData);
       } catch (error) {
-        console.error('Ошибка загрузки проектов:', error);
+        logger.error('Ошибка загрузки проектов', error);
       } finally {
         setLoading(false);
       }

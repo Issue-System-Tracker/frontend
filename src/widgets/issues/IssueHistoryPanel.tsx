@@ -2,54 +2,14 @@
 
 import { Clock, User } from 'lucide-react';
 import { IssueHistory } from '@/features/issue-management';
+import { normalizeIso, formatDate } from '@/shared/utils/dateUtils';
+import { getChangeTypeLabel } from '@/shared/utils/issueUtils';
 
 interface IssueHistoryPanelProps {
-    history: IssueHistory[];
-    loading: boolean;
-    error: string | null;
+  history: IssueHistory[];
+  loading: boolean;
+  error: string | null;
 }
-
-const normalizeIso = (value: string): string => {
-    if (!value) return value;
-    if (/^\d+$/.test(value)) {
-        const num = Number(value);
-        const ms = value.length <= 10 ? num * 1000 : num;
-        return new Date(ms).toISOString();
-    }
-    let v = value.trim();
-    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(v)) {
-        v = v.replace(' ', 'T');
-    }
-    if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(v)) {
-        v = `${v}Z`;
-    }
-    return v;
-};
-
-const formatDate = (dateString: string) => {
-    const normalized = normalizeIso(dateString);
-    const date = new Date(normalized);
-    if (isNaN(date.getTime())) return '—';
-    return date.toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-};
-
-const getChangeTypeLabel = (changeType: string): string => {
-    const labels: Record<string, string> = {
-        'STATUS_CHANGE': 'Изменение статуса',
-        'TITLE_CHANGE': 'Изменение названия',
-        'DESCRIPTION_CHANGE': 'Изменение описания',
-        'PRIORITY_CHANGE': 'Изменение приоритета',
-        'ASSIGNEE_CHANGE': 'Изменение исполнителя',
-        'SPRINT_CHANGE': 'Изменение спринта',
-    };
-    return labels[changeType] || changeType;
-};
 
 export default function IssueHistoryPanel({ history, loading, error }: IssueHistoryPanelProps) {
     return (

@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useProjectStore } from "@/entities/project";
-import { fetchSprints } from "@/features/sprint-management";
-import { Sprint } from "@/entities/sprint";
 import { CreateIssueRequest, IssueType, Priority } from "@/features/issue-management";
 import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
 import TextInput from "@/shared/ui/inputs/TextInput";
-import { logger } from "@/shared/utils/logger";
+import { useSprints } from "@/entities/sprint/hooks/useSprints";
+import { ISSUE_TYPE, PRIORITY } from "@/shared/constants";
 
 interface CreateIssueModalProps {
   isOpen: boolean;
@@ -21,40 +20,17 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
   const [formData, setFormData] = useState<CreateIssueRequest>({
     title: "",
     description: "",
-    type: "BUG",
-    priority: "MEDIUM",
+    type: ISSUE_TYPE.BUG,
+    priority: PRIORITY.MEDIUM,
     startDate: "",
     endDate: "",
     sprintId: undefined,
     assigneeEmail: undefined,
   });
-  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const loadSprints = async () => {
-    if (!selectedProject) {
-      logger.warn("selectedProject не определен при загрузке спринтов");
-      return;
-    }
-    
-    try {
-      const sprintsData = await fetchSprints(selectedProject.id);
-      logger.info("Загружено спринтов", { count: sprintsData.length, sprints: sprintsData });
-      setSprints(sprintsData);
-    } catch (err) {
-      logger.error("Ошибка загрузки спринтов", err);
-      setSprints([]); // Устанавливаем пустой массив при ошибке
-    }
-  };
-
-  // Загрузка спринтов при открытии модального окна
-  useEffect(() => {
-    if (isOpen && selectedProject) {
-      loadSprints();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, selectedProject]);
+  
+  const { sprints } = useSprints(selectedProject?.id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,8 +72,8 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
       setFormData({
         title: "",
         description: "",
-        type: "BUG",
-        priority: "MEDIUM",
+        type: ISSUE_TYPE.BUG,
+        priority: PRIORITY.MEDIUM,
         startDate: "",
         endDate: "",
         sprintId: undefined,
@@ -146,8 +122,8 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
-                <option value="BUG">Ошибка</option>
-                <option value="FEATURE">Функция</option>
+                <option value={ISSUE_TYPE.BUG}>Ошибка</option>
+                <option value={ISSUE_TYPE.FEATURE}>Функция</option>
               </select>
             </div>
           </div>
@@ -174,9 +150,9 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
                 onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as Priority }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="HIGH">Высокий</option>
-                <option value="MEDIUM">Средний</option>
-                <option value="LOW">Низкий</option>
+                <option value={PRIORITY.HIGH}>Высокий</option>
+                <option value={PRIORITY.MEDIUM}>Средний</option>
+                <option value={PRIORITY.LOW}>Низкий</option>
               </select>
             </div>
             

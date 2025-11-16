@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CreateSprintRequest } from "@/entities/sprint";
 import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
 import TextInput from "@/shared/ui/inputs/TextInput";
+import { logger } from "@/shared/utils/logger";
 
 interface CreateSprintModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export default function CreateSprintModal({ isOpen, onClose, onSubmit }: CreateS
     }
 
     // Диагностика данных
-    console.log("🔍 CreateSprintModal: Данные формы", {
+    logger.debug("CreateSprintModal: Данные формы", {
       name: formData.name,
       startDate: formData.startDate,
       endDate: formData.endDate,
@@ -51,7 +52,7 @@ export default function CreateSprintModal({ isOpen, onClose, onSubmit }: CreateS
         endDate: formData.endDate,
       };
       
-      console.log("🔍 CreateSprintModal: Отправляем данные", sprintData);
+      logger.debug("CreateSprintModal: Отправляем данные", sprintData);
       
       await onSubmit(sprintData);
       

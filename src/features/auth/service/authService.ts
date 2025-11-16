@@ -8,6 +8,7 @@ import {
 import { useAuthStore } from "../model/authStore";
 import { StorageService } from "@/shared/services/storageService";
 import { logger } from "@/shared/utils/logger";
+import { TIME_INTERVALS } from "@/shared/constants";
 
 export async function submitRegister(data: RegisterRequest) {
   try {
@@ -48,7 +49,7 @@ export async function submitLogin(data: LoginRequest): Promise<LoginResponse> {
       // Ждем пока звук проиграется перед переходом
       await new Promise<void>((resolve) => {
         authSound.play().catch(err => {
-          console.warn('Не удалось воспроизвести звук авторизации:', err);
+          logger.warn('Не удалось воспроизвести звук авторизации', err);
           resolve(); // Если ошибка воспроизведения, все равно переходим
         });
         
@@ -56,10 +57,10 @@ export async function submitLogin(data: LoginRequest): Promise<LoginResponse> {
           resolve();
         };
         
-        // Максимальная задержка 2 секунды на случай если звук не загрузится
+        // Максимальная задержка на случай если звук не загрузится
         setTimeout(() => {
           resolve();
-        }, 2000);
+        }, TIME_INTERVALS.SOUND_TIMEOUT);
       });
     }
 
@@ -118,7 +119,7 @@ export async function submitRegisterAndLogin(data: RegisterRequest) {
       // Ждем пока звук проиграется перед переходом
       await new Promise<void>((resolve) => {
         authSound.play().catch(err => {
-          console.warn('Не удалось воспроизвести звук авторизации:', err);
+          logger.warn('Не удалось воспроизвести звук авторизации', err);
           resolve(); // Если ошибка воспроизведения, все равно переходим
         });
         
@@ -126,10 +127,10 @@ export async function submitRegisterAndLogin(data: RegisterRequest) {
           resolve();
         };
         
-        // Максимальная задержка 2 секунды на случай если звук не загрузится
+        // Максимальная задержка на случай если звук не загрузится
         setTimeout(() => {
           resolve();
-        }, 2000);
+        }, TIME_INTERVALS.SOUND_TIMEOUT);
       });
     } else {
       logger.error("accessToken отсутствует в ответе", loginRes);

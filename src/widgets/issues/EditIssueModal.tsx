@@ -1,29 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Issue, IssueType, IssueStatus } from '@/entities/issue';
+import { Issue, UpdateIssueData, IssueType, IssueStatus } from '@/entities/issue';
 import { useProjectStore } from '@/entities/project';
-import { fetchSprints } from '@/features/sprint-management';
-import { Sprint } from '@/entities/sprint';
 import { fetchIssueHistory } from '@/features/issue-management';
 import { IssueHistory } from '@/features/issue-management';
 import { X, Clock } from 'lucide-react';
 import IssueHistoryPanel from './IssueHistoryPanel';
+import { logger } from '@/shared/utils/logger';
+import { useSprints } from '@/entities/sprint/hooks/useSprints';
+import { ISSUE_TYPE, ISSUE_STATUS } from '@/shared/constants';
 
 interface EditIssueModalProps {
   isOpen: boolean;
   onClose: () => void;
   issue: Issue | null;
   projectName?: string;
-  onUpdateIssue: (issueData: {
-    id: number;
-    title: string;
-    description: string;
-    type: IssueType;
-    status: IssueStatus;
-    sprintId?: number;
-    assigneeEmail?: string;
-  }) => void;
+  onUpdateIssue: (issueData: UpdateIssueData) => void;
 }
 
 
@@ -37,15 +30,16 @@ export default function EditIssueModal({
   const { selectedProject } = useProjectStore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState<IssueType>("FEATURE");
-  const [status, setStatus] = useState<IssueStatus>("OPEN");
+  const [type, setType] = useState<IssueType>(ISSUE_TYPE.FEATURE);
+  const [status, setStatus] = useState<IssueStatus>(ISSUE_STATUS.OPEN);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<IssueHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [sprintId, setSprintId] = useState<number | undefined>(undefined);
   const [assigneeEmail, setAssigneeEmail] = useState<string | undefined>(undefined);
+  
+  const { sprints } = useSprints(selectedProject?.id);
 
   // Обновляем форму при изменении issue
   useEffect(() => {
@@ -59,29 +53,6 @@ export default function EditIssueModal({
     }
   }, [issue]);
 
-  const loadSprints = async () => {
-    if (!selectedProject) {
-      console.warn("selectedProject не определен при загрузке спринтов");
-      return;
-    }
-    
-    try {
-      const sprintsData = await fetchSprints(selectedProject.id);
-      console.log("Загружено спринтов", { count: sprintsData.length, sprints: sprintsData });
-      setSprints(sprintsData);
-    } catch (err) {
-      console.error("Ошибка загрузки спринтов", err);
-      setSprints([]); // Устанавливаем пустой массив при ошибке
-    }
-  };
-
-  // Загрузка спринтов при открытии модального окна
-  useEffect(() => {
-    if (isOpen && selectedProject) {
-      loadSprints();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, selectedProject]);
 
   const loadHistory = useCallback(async () => {
     if (!selectedProject || !issue) return;
@@ -214,8 +185,8 @@ export default function EditIssueModal({
               onChange={(e) => setType(e.target.value as IssueType)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="FEATURE">Feature</option>
-              <option value="BUG">Bug</option>
+              <option value={ISSUE_TYPE.FEATURE}>Feature</option>
+              <option value={ISSUE_TYPE.BUG}>Bug</option>
             </select>
           </div>
 
@@ -229,10 +200,10 @@ export default function EditIssueModal({
               onChange={(e) => setStatus(e.target.value as IssueStatus)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="OPEN">Open</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="TESTING">Testing</option>
-              <option value="DONE">Done</option>
+              <option value={ISSUE_STATUS.OPEN}>Open</option>
+              <option value={ISSUE_STATUS.IN_PROGRESS}>In Progress</option>
+              <option value={ISSUE_STATUS.TESTING}>Testing</option>
+              <option value={ISSUE_STATUS.DONE}>Done</option>
             </select>
           </div>
 

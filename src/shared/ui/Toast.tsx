@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { X, AlertCircle, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
+import { TIME_INTERVALS } from '@/shared/constants';
 
 export type ToastType = 'error' | 'success' | 'info' | 'warning';
 
@@ -21,7 +23,7 @@ export default function Toast({ message, type = 'error', duration = 5000, onClos
     setIsExiting(true);
     setTimeout(() => {
       onClose();
-    }, 500); // Время анимации исчезания (должно совпадать с duration в transition)
+    }, TIME_INTERVALS.ANIMATION_TIMEOUT); // Время анимации исчезания (должно совпадать с duration в transition)
   }, [onClose]);
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export default function Toast({ message, type = 'error', duration = 5000, onClos
       const errorSound = new Audio('/sounds/error-sound.mp3');
       errorSound.volume = 0.5; // Уменьшаем громкость
       errorSound.play().catch(err => {
-        console.warn('Не удалось воспроизвести звук ошибки:', err);
+        logger.warn('Не удалось воспроизвести звук ошибки', err);
       });
     }
 
