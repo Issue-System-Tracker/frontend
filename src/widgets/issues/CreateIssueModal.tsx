@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProjectStore } from "@/entities/project";
 import { CreateIssueRequest, IssueType, Priority } from "@/features/issue-management";
 import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
 import TextInput from "@/shared/ui/inputs/TextInput";
 import { useSprints } from "@/entities/sprint/hooks/useSprints";
 import { ISSUE_TYPE, PRIORITY } from "@/shared/constants";
+import { logger } from "@/shared/utils/logger";
 
 interface CreateIssueModalProps {
   isOpen: boolean;
@@ -30,7 +31,17 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  const { sprints } = useSprints(selectedProject?.id);
+  const { sprints, loading: sprintsLoading } = useSprints(selectedProject?.id);
+
+  // Отладочный лог для проверки загрузки спринтов
+  useEffect(() => {
+    logger.info("Состояние спринтов в CreateIssueModal", { 
+      count: sprints.length, 
+      sprints: sprints,
+      sprintsLoading,
+      selectedProjectId: selectedProject?.id
+    });
+  }, [sprints, sprintsLoading, selectedProject?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +71,13 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
         submitData.endDate = formData.endDate;
       }
       if (formData.sprintId) {
+        // Используем ID напрямую - API должен возвращать ID согласно документации
         submitData.sprintId = formData.sprintId;
+        const selectedSprint = sprints.find(s => s.id === formData.sprintId);
+        logger.info("Привязка issue к спринту", { 
+          sprintId: formData.sprintId,
+          sprintName: selectedSprint?.name || "не найден"
+        });
       }
       if (formData.assigneeEmail) {
         submitData.assigneeEmail = formData.assigneeEmail;
@@ -205,22 +222,58 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
                 Спринт <br /> (необязательно)
               </label>
               <select
-                value={formData.sprintId || ""}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  sprintId: e.target.value ? parseInt(e.target.value) : undefined 
-                }))}
+                value={formData.sprintId ? String(formData.sprintId) : ""}
+                onChange={(e) => {
+                  const selectedValue = e.target.value;
+                  const sprintIdValue = selectedValue ? parseInt(selectedValue, 10) : undefined;
+                  logger.info("Выбран спринт", { selectedValue, sprintIdValue, formData: { ...formData, sprintId: sprintIdValue } });
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    sprintId: sprintIdValue
+                  }));
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={sprintsLoading}
               >
                 <option value="">Не выбран</option>
-                {sprints.map((sprint, index) => (
-                  <option key={sprint.id || `sprint-${index}`} value={sprint.id}>
-                    {sprint.name}
-                  </option>
-                ))}
+                {sprints.map((sprint, index) => {
+                  // Проверяем, что у спринта есть имя и ID
+                  const sprintName = sprint?.name;
+                  const sprintId = sprint?.id;
+                  
+                  if (!sprint || !sprintName) {
+                    logger.warn("Пропущен спринт с некорректными данными", { sprint, index, sprintName });
+                    return null;
+                  }
+                  
+                  // API должен возвращать ID согласно документации
+                  if (sprintId === undefined || sprintId === null) {
+                    logger.error("У спринта нет ID! API должен возвращать ID согласно документации", { 
+                      sprint, 
+                      index, 
+                      sprintName,
+                      allSprintKeys: Object.keys(sprint || {})
+                    });
+                    return null; // Не показываем спринт без ID
+                  }
+                  
+                  return (
+                    <option key={sprintId} value={String(sprintId)}>
+                      {sprintName}
+                    </option>
+                  );
+                })}
               </select>
-              {sprints.length === 0 && (
+              {sprints.length === 0 && !sprintsLoading && (
                 <p className="text-xs text-gray-500 mt-1">В проекте пока нет спринтов</p>
+              )}
+              {sprintsLoading && (
+                <p className="text-xs text-gray-500 mt-1">Загрузка спринтов...</p>
+              )}
+              {formData.sprintId && (
+                <p className="text-xs text-green-600 mt-1">
+                  Выбран спринт: {sprints.find(s => s.id === formData.sprintId)?.name || `ID: ${formData.sprintId}`}
+                </p>
               )}
             </div>
           </div>

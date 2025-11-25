@@ -17,7 +17,11 @@ export default function SprintDetailsModal({
 }: SprintDetailsModalProps) {
   if (!isOpen || !sprint) return null;
 
-  const sprintIssues = issues.filter(issue => issue.sprint?.id === sprint.id);
+  // Фильтруем issues по sprintId согласно документации
+  const sprintIssues = issues.filter(issue => {
+    // Согласно документации, API возвращает sprintId (число или null) в issue
+    return issue.sprint?.id === sprint.id;
+  });
   const completedIssues = sprintIssues.filter(issue => issue.status === 'DONE').length;
   const inProgressIssues = sprintIssues.filter(issue => issue.status === 'IN_PROGRESS').length;
   const todoIssues = sprintIssues.filter(issue => issue.status === 'OPEN').length;

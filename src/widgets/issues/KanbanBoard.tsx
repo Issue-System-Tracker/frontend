@@ -293,10 +293,17 @@ export default function KanbanBoard() {
         updateData.endDate = existingIssue.endDate.trim();
       }
 
-      // Добавляем sprintId если он указан (из формы или из существующей задачи)
-      const sprintId = issueData.sprintId !== undefined ? issueData.sprintId : existingIssue.sprint?.id;
-      if (sprintId !== undefined && sprintId !== null && !isNaN(Number(sprintId))) {
-        updateData.sprintId = Number(sprintId);
+      // Обработка sprintId: если указан в issueData (включая null для отвязки), используем его, иначе сохраняем существующий
+      if (issueData.sprintId !== undefined) {
+        // Если null - отвязка от спринта, если число - привязка к спринту
+        if (issueData.sprintId === null) {
+          updateData.sprintId = null; // Отвязка от спринта
+        } else if (!isNaN(Number(issueData.sprintId))) {
+          updateData.sprintId = Number(issueData.sprintId); // Привязка к спринту
+        }
+      } else if (existingIssue.sprint?.id) {
+        // Если sprintId не указан в issueData, сохраняем существующий спринт
+        updateData.sprintId = existingIssue.sprint.id;
       }
 
       logger.debug("Обновление задачи - детали", {

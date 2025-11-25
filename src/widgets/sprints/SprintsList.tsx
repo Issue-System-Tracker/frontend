@@ -19,6 +19,7 @@ const SprintCard = ({
   onDelete: (sprintId: number) => void;
 }) => {
   const { issues } = useIssueStore();
+  // Фильтруем issues по sprintId согласно документации
   const sprintIssues = issues.filter(issue => issue.sprint?.id === sprint.id);
   const completedIssues = sprintIssues.filter(issue => issue.status === 'DONE').length;
   const totalIssues = sprintIssues.length;

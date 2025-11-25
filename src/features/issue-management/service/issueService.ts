@@ -31,6 +31,7 @@ export async function submitCreateIssue(projectId: number, data: CreateIssueRequ
 }
 
 // Маппинг API ответа в формат Issue
+// Согласно документации, API возвращает sprintId (число или null), а не объект sprint
 function mapIssueResponse(issue: IssueApiResponse): Issue {
   return {
     id: issue.id,
@@ -39,11 +40,13 @@ function mapIssueResponse(issue: IssueApiResponse): Issue {
     type: issue.type || 'BUG', // Если type null, используем BUG по умолчанию
     status: issue.status,
     priority: issue.priority,
+    // Создаем assignee из assigneeEmail
     assignee: issue.assigneeEmail ? {
       id: issue.assigneeEmail,
       email: issue.assigneeEmail,
       fullName: issue.assigneeEmail.split('@')[0]
     } : undefined,
+    // Создаем creator из authorEmail
     creator: {
       id: issue.authorEmail,
       email: issue.authorEmail,
@@ -51,9 +54,10 @@ function mapIssueResponse(issue: IssueApiResponse): Issue {
     },
     startDate: issue.startDate,
     endDate: issue.endDate,
+    // Создаем объект sprint из sprintId (имя будет обновлено позже, когда загрузятся спринты)
     sprint: issue.sprintId ? {
       id: issue.sprintId,
-      name: `Sprint ${issue.sprintId}` // Временное решение, нужно получать имя спринта
+      name: `Sprint ${issue.sprintId}` // Временное имя, будет заменено при загрузке спринтов
     } : undefined
   };
 }

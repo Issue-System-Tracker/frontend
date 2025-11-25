@@ -24,7 +24,11 @@ export function useSprints(projectId: number | undefined) {
       setLoading(true);
       setError(null);
       const sprintsData = await fetchSprints(projectId);
-      logger.info("Загружено спринтов", { count: sprintsData.length, sprints: sprintsData });
+      logger.info("Загружено спринтов в useSprints", { 
+        count: sprintsData.length, 
+        sprints: sprintsData,
+        firstSprintStructure: sprintsData[0] ? Object.keys(sprintsData[0]) : []
+      });
       setSprints(sprintsData);
     } catch (err) {
       logger.error("Ошибка загрузки спринтов", err);

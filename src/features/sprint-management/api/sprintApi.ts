@@ -47,7 +47,53 @@ export async function getSprints(projectId: number): Promise<Sprint[]> {
       throw new Error(errorMessage);
     }
 
-    const sprints = await res.json();
+    const sprintsRaw = await res.json();
+    
+    // Нормализуем структуру спринтов: API возвращает sprintId, преобразуем в id для внутреннего использования
+    const sprints = sprintsRaw.map((sprint: any) => {
+      // API возвращает sprintId вместо id
+      if (sprint.sprintId !== undefined && sprint.id === undefined) {
+        return {
+          ...sprint,
+          id: sprint.sprintId,
+          // Удаляем sprintId, оставляем только id
+          sprintId: undefined
+        };
+      }
+      // Если есть и id, и sprintId, приоритет у id
+      if (sprint.id !== undefined) {
+        return sprint;
+      }
+      // Если нет ни id, ни sprintId - это ошибка
+      logger.error("Спринт без ID и sprintId!", { sprint });
+      return sprint;
+    });
+    
+    // Проверяем структуру ответа
+    if (sprints.length > 0) {
+      const firstSprint = sprints[0];
+      logger.info("Структура спринтов с API", { 
+        projectId, 
+        count: sprints.length,
+        firstSprint: firstSprint,
+        firstSprintKeys: Object.keys(firstSprint || {}),
+        firstSprintHasId: 'id' in (firstSprint || {}),
+        firstSprintHasSprintId: 'sprintId' in (firstSprint || {}),
+        firstSprintId: firstSprint?.id,
+        firstSprintSprintId: firstSprint?.sprintId,
+        allSprints: sprints
+      });
+      
+      // Проверяем, что у всех спринтов есть ID
+      const sprintsWithoutId = sprints.filter(s => !s.id && s.id !== 0);
+      if (sprintsWithoutId.length > 0) {
+        logger.error("Обнаружены спринты без ID после нормализации! API должен возвращать sprintId", {
+          count: sprintsWithoutId.length,
+          sprintsWithoutId: sprintsWithoutId
+        });
+      }
+    }
+    
     logger.success("Спринты успешно загружены", { projectId, count: sprints.length });
     return sprints;
   } catch (error) {

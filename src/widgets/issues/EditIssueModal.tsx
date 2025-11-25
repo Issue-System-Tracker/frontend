@@ -7,9 +7,9 @@ import { fetchIssueHistory } from '@/features/issue-management';
 import { IssueHistory } from '@/features/issue-management';
 import { X, Clock } from 'lucide-react';
 import IssueHistoryPanel from './IssueHistoryPanel';
-import { logger } from '@/shared/utils/logger';
 import { useSprints } from '@/entities/sprint/hooks/useSprints';
 import { ISSUE_TYPE, ISSUE_STATUS } from '@/shared/constants';
+import { logger } from '@/shared/utils/logger';
 
 interface EditIssueModalProps {
   isOpen: boolean;
@@ -36,10 +36,21 @@ export default function EditIssueModal({
   const [history, setHistory] = useState<IssueHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const [sprintId, setSprintId] = useState<number | undefined>(undefined);
+  const [sprintId, setSprintId] = useState<number | null | undefined>(undefined);
   const [assigneeEmail, setAssigneeEmail] = useState<string | undefined>(undefined);
   
-  const { sprints } = useSprints(selectedProject?.id);
+  const { sprints, loading: sprintsLoading } = useSprints(selectedProject?.id);
+
+  // Отладочный лог для проверки загрузки спринтов
+  useEffect(() => {
+    logger.info("Состояние спринтов в EditIssueModal", { 
+      count: sprints.length, 
+      sprints: sprints,
+      sprintsLoading,
+      selectedProjectId: selectedProject?.id,
+      currentSprintId: sprintId
+    });
+  }, [sprints, sprintsLoading, selectedProject?.id, sprintId]);
 
   // Обновляем форму при изменении issue
   useEffect(() => {
@@ -48,6 +59,7 @@ export default function EditIssueModal({
       setDescription(issue.description);
       setType(issue.type);
       setStatus(issue.status);
+      // Согласно документации, API возвращает sprintId в issue
       setSprintId(issue.sprint?.id);
       setAssigneeEmail(issue.assignee?.email);
     }
@@ -86,7 +98,7 @@ export default function EditIssueModal({
       description: description.trim(),
       type,
       status,
-      sprintId: sprintId,
+      sprintId: sprintId === undefined ? undefined : (sprintId === null ? null : sprintId),
       assigneeEmail: assigneeEmail
     });
 
@@ -240,19 +252,55 @@ export default function EditIssueModal({
                 Спринт <br /> (необязательно)
               </label>
               <select
-                value={sprintId || ""}
-                onChange={(e) => setSprintId(e.target.value ? parseInt(e.target.value) : undefined)}
+                value={sprintId ? String(sprintId) : ""}
+                onChange={(e) => {
+                  const selectedValue = e.target.value;
+                  const sprintIdValue = selectedValue ? parseInt(selectedValue, 10) : null;
+                  logger.info("Выбран спринт в EditIssueModal", { selectedValue, sprintIdValue, issueId: issue?.id });
+                  setSprintId(sprintIdValue);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={sprintsLoading}
               >
                 <option value="">Не выбран</option>
-                {sprints.map((sprint, index) => (
-                  <option key={`sprint-${sprint.id}-${index}`} value={sprint.id}>
-                    {sprint.name}
-                  </option>
-                ))}
+                {sprints.map((sprint, index) => {
+                  // Проверяем, что у спринта есть имя и ID
+                  const sprintName = sprint?.name;
+                  const sprintId = sprint?.id;
+                  
+                  if (!sprint || !sprintName) {
+                    logger.warn("Пропущен спринт с некорректными данными", { sprint, index, sprintName });
+                    return null;
+                  }
+                  
+                  // API должен возвращать ID согласно документации
+                  if (sprintId === undefined || sprintId === null) {
+                    logger.error("У спринта нет ID! API должен возвращать ID согласно документации", { 
+                      sprint, 
+                      index, 
+                      sprintName,
+                      allSprintKeys: Object.keys(sprint || {})
+                    });
+                    return null; // Не показываем спринт без ID
+                  }
+                  
+                  return (
+                    <option key={`sprint-${sprintId}-${index}`} value={String(sprintId)}>
+                      {sprintName}
+                    </option>
+                  );
+                })}
               </select>
-              {sprints.length === 0 && (
+              {sprints.length === 0 && !sprintsLoading && (
                 <p className="text-xs text-gray-500 mt-1">В проекте пока нет спринтов</p>
+              )}
+              {sprintsLoading && (
+                <p className="text-xs text-gray-500 mt-1">Загрузка спринтов...</p>
+              )}
+              {sprintId && (
+                <p className="text-xs text-green-600 mt-1">
+                  Выбран спринт: {sprints.find(s => s.id === sprintId)?.name || `ID: ${sprintId}`}
+                </p>
               )}
             </div>
           </div>

@@ -10,7 +10,7 @@ export interface UpdateIssueData {
   description: string;
   type: IssueType;
   status: IssueStatus;
-  sprintId?: number;
+  sprintId?: number | null;
   assigneeEmail?: string;
 }
 

@@ -14,6 +14,7 @@ import CreateSprintModal from "@/widgets/sprints/CreateSprintModal";
 import SprintDetailsModal from "@/widgets/sprints/SprintDetailsModal";
 import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
 import { Plus } from "lucide-react";
+import { logger } from "@/shared/utils/logger";
 
 export default function SprintsPage() {
   const { selectedProject } = useProjectStore();
@@ -61,16 +62,44 @@ export default function SprintsPage() {
     setSelectedSprint(sprint);
     setShowDetailsModal(true);
     try {
-      if (!selectedProject || sprint?.id == null) return;
+      if (!selectedProject) return;
       const projectIdNum = Number(selectedProject.id);
-      const sprintIdNum = Number(sprint.id);
-      if (isNaN(projectIdNum) || isNaN(sprintIdNum)) return;
-      if (String(sprint.id) === 'undefined') return;
+      
+      // Проверяем, есть ли реальный ID у спринта
+      const sprintId = sprint?.id;
+      
+      // Проверяем наличие ID спринта
+      if (!sprintId || sprintId === undefined || sprintId === null) {
+        logger.error("У спринта нет ID! Невозможно загрузить issues", { sprint });
+        // Fallback: фильтруем issues по sprintId из локального списка
+        const filteredIssues = issues.filter(issue => 
+          issue.sprint?.id === sprint.id
+        );
+        setIssuesForSprint(filteredIssues);
+        return;
+      }
+      
+      const sprintIdNum = Number(sprintId);
+      if (isNaN(projectIdNum) || isNaN(sprintIdNum)) {
+        logger.error("Некорректные ID для загрузки issues", { projectIdNum, sprintIdNum, sprint });
+        // Fallback: фильтруем issues по sprintId из локального списка
+        const filteredIssues = issues.filter(issue => 
+          issue.sprint?.id === sprint.id
+        );
+        setIssuesForSprint(filteredIssues);
+        return;
+      }
+      
+      logger.info("Загрузка issues для спринта", { projectIdNum, sprintIdNum, sprint });
       const loaded = await fetchIssuesBySprint(projectIdNum, sprintIdNum);
-        setIssuesForSprint(loaded);
-    } catch {
-      // Fallback: если не удалось загрузить по спринту, используем все задачи из стора
-      setIssuesForSprint(issues);
+      setIssuesForSprint(loaded);
+    } catch (err) {
+      logger.error("Ошибка загрузки issues для спринта", err);
+      // Fallback: фильтруем issues по sprintId из локального списка
+      const filteredIssues = issues.filter(issue => 
+        issue.sprint?.id === sprint.id
+      );
+      setIssuesForSprint(filteredIssues.length > 0 ? filteredIssues : issues);
     }
   };
 

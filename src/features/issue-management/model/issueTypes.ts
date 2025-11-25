@@ -48,7 +48,7 @@ export interface UpdateIssueRequest {
   assigneeEmail?: string;
   startDate?: string;
   endDate?: string;
-  sprintId?: number;
+  sprintId?: number | null;
 }
 
 export interface SearchIssuesRequest {
@@ -68,7 +68,7 @@ export interface IssueHistory {
   description: string;
 }
 
-// API ответ для задач (реальная структура с сервера)
+// API ответ для задач (реальная структура с сервера согласно документации)
 export interface IssueApiResponse {
   id: number;
   title: string;
@@ -76,10 +76,10 @@ export interface IssueApiResponse {
   type: IssueType | null;
   status: IssueStatus;
   priority: Priority;
-  assigneeEmail: string | null;
+  assigneeEmail?: string | null;
   authorEmail: string;
-  startDate: string;
-  endDate: string;
-  projectId: number;
-  sprintId: number | null;
+  startDate?: string;
+  endDate?: string;
+  sprintId?: number | null;
+  projectId?: number;
 }

@@ -113,8 +113,13 @@ export async function updateIssue(projectId: number, issueId: number, data: Upda
   if (data.endDate && data.endDate.trim() !== '') {
     cleanData.endDate = data.endDate.trim();
   }
-  if (data.sprintId !== undefined && data.sprintId !== null && !isNaN(Number(data.sprintId))) {
-    cleanData.sprintId = Number(data.sprintId);
+  // Обработка sprintId: если null - отвязка от спринта, если число - привязка, если undefined - не меняем
+  if (data.sprintId !== undefined) {
+    if (data.sprintId === null) {
+      cleanData.sprintId = null; // Отвязка от спринта
+    } else if (!isNaN(Number(data.sprintId))) {
+      cleanData.sprintId = Number(data.sprintId); // Привязка к спринту
+    }
   }
 
   logger.info("Обновление задачи", { 
