@@ -2,11 +2,16 @@ import { ENDPOINTS } from "@/shared/config/api";
 import { apiFetch } from "@/shared/services/apiClient";
 import { logger } from "@/shared/utils/logger";
 import { handleApiError } from "@/shared/utils/errorHandler";
-import { 
-  Sprint, 
-  CreateSprintRequest, 
-  UpdateSprintRequest 
+import {
+  Sprint,
+  CreateSprintRequest,
+  UpdateSprintRequest
 } from "../model/sprintTypes";
+
+// Сырые данные спринта из API: могут содержать sprintId вместо id
+type SprintApiRaw = Sprint & {
+  sprintId?: number;
+};
 
 // Создание спринта
 export async function createSprint(projectId: number, data: CreateSprintRequest): Promise<void> {
@@ -47,10 +52,10 @@ export async function getSprints(projectId: number): Promise<Sprint[]> {
       throw new Error(errorMessage);
     }
 
-    const sprintsRaw = await res.json();
+    const sprintsRaw = (await res.json()) as SprintApiRaw[];
     
     // Нормализуем структуру спринтов: API возвращает sprintId, преобразуем в id для внутреннего использования
-    const sprints = sprintsRaw.map((sprint: any) => {
+    const sprints: Sprint[] = sprintsRaw.map((sprint) => {
       // API возвращает sprintId вместо id
       if (sprint.sprintId !== undefined && sprint.id === undefined) {
         return {
@@ -78,14 +83,13 @@ export async function getSprints(projectId: number): Promise<Sprint[]> {
         firstSprint: firstSprint,
         firstSprintKeys: Object.keys(firstSprint || {}),
         firstSprintHasId: 'id' in (firstSprint || {}),
-        firstSprintHasSprintId: 'sprintId' in (firstSprint || {}),
+        // sprintId есть только в сыром ответе, поэтому отдельно не логируем его здесь
         firstSprintId: firstSprint?.id,
-        firstSprintSprintId: firstSprint?.sprintId,
         allSprints: sprints
       });
       
       // Проверяем, что у всех спринтов есть ID
-      const sprintsWithoutId = sprints.filter(s => !s.id && s.id !== 0);
+      const sprintsWithoutId = sprints.filter((s: Sprint) => !s.id && s.id !== 0);
       if (sprintsWithoutId.length > 0) {
         logger.error("Обнаружены спринты без ID после нормализации! API должен возвращать sprintId", {
           count: sprintsWithoutId.length,
