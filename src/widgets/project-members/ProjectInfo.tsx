@@ -6,7 +6,7 @@ import { useProjectStore } from "@/entities/project";
 import { ProjectBaseUser } from "@/entities/project";
 import { submitDeleteProject, submitRemoveProjectMember } from "@/features/project-management";
 import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
-import { UserPlus, Users, Trash2, X } from "lucide-react";
+import { UserPlus, Users, Trash2 } from "lucide-react";
 import AddMemberModal from "./AddMemberModal";
 
 export default function ProjectInfo() {
@@ -145,15 +145,15 @@ export default function ProjectInfo() {
                     Участник
                   </span>
                   <div className="ml-auto">
-                    <UniversalButton
-                      variant="outline"
-                      className="text-red-600 border-red-300 hover:bg-red-50 p-1 h-6 w-6 flex items-center justify-center"
+                    <button
+                      type="button"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                       onClick={() => handleRemoveMember(memberEmail)}
                       disabled={removingMemberEmail === memberEmail}
                       aria-label="Удалить участника"
                     >
-                      <X size={14} />
-                    </UniversalButton>
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               );

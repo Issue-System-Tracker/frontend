@@ -5,6 +5,7 @@ import { useProjectStore } from "@/entities/project";
 import { CreateIssueRequest, IssueType, Priority } from "@/features/issue-management";
 import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
 import TextInput from "@/shared/ui/inputs/TextInput";
+import CustomSelect, { SelectOption } from "@/shared/ui/inputs/CustomSelect";
 import { useSprints } from "@/entities/sprint/hooks/useSprints";
 import { ISSUE_TYPE, PRIORITY } from "@/shared/constants";
 import { logger } from "@/shared/utils/logger";
@@ -129,20 +130,16 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
               maxLength={100}
             />
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Тип задачи *
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as IssueType }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value={ISSUE_TYPE.BUG}>Ошибка</option>
-                <option value={ISSUE_TYPE.FEATURE}>Функция</option>
-              </select>
-            </div>
+            <CustomSelect<IssueType>
+              label="Тип задачи"
+              value={formData.type}
+              options={[
+                { value: ISSUE_TYPE.BUG, label: "Ошибка" },
+                { value: ISSUE_TYPE.FEATURE, label: "Функция" },
+              ]}
+              onChange={(value) => setFormData(prev => ({ ...prev, type: value as IssueType }))}
+              required
+            />
           </div>
 
           <TextInput
@@ -158,20 +155,16 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
           />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Приоритет
-              </label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as Priority }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value={PRIORITY.HIGH}>Высокий</option>
-                <option value={PRIORITY.MEDIUM}>Средний</option>
-                <option value={PRIORITY.LOW}>Низкий</option>
-              </select>
-            </div>
+            <CustomSelect<Priority>
+              label="Приоритет"
+              value={formData.priority}
+              options={[
+                { value: PRIORITY.HIGH, label: "Высокий" },
+                { value: PRIORITY.MEDIUM, label: "Средний" },
+                { value: PRIORITY.LOW, label: "Низкий" },
+              ]}
+              onChange={(value) => setFormData(prev => ({ ...prev, priority: value as Priority }))}
+            />
             
             <TextInput
               label="Дата начала"
@@ -189,86 +182,63 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Исполнитель <br /> (необязательно)
-              </label>
-              <select
-                value={formData.assigneeEmail || ""}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  assigneeEmail: e.target.value ? e.target.value : undefined 
-                }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Не назначен</option>
-                {selectedProject && (
-                  <>
-                    <option value={selectedProject.admin.email}>
-                      {selectedProject.admin.fullName} (Админ)
-                    </option>
-                    {selectedProject.members?.map((member) => (
-                      <option key={member.email} value={member.email}>
-                        {member.fullName}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-            </div>
+            <CustomSelect<string>
+              label="Исполнитель (необязательно)"
+              value={formData.assigneeEmail || null}
+              options={selectedProject ? [
+                { value: selectedProject.admin.email, label: `${selectedProject.admin.fullName} (Админ)` },
+                ...(selectedProject.members
+                  ?.filter((member) => member.email !== selectedProject.admin.email)
+                  .map((member) => ({
+                    value: member.email,
+                    label: member.fullName,
+                  })) || []),
+              ] : []}
+              onChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                assigneeEmail: value || undefined 
+              }))}
+              emptyOptionLabel="Не назначен"
+              placeholder="Выберите исполнителя"
+            />
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Спринт <br /> (необязательно)
-              </label>
-              <select
-                value={formData.sprintId ? String(formData.sprintId) : ""}
-                onChange={(e) => {
-                  const selectedValue = e.target.value;
-                  const sprintIdValue = selectedValue ? parseInt(selectedValue, 10) : undefined;
-                  logger.info("Выбран спринт", { selectedValue, sprintIdValue, formData: { ...formData, sprintId: sprintIdValue } });
+              <CustomSelect<number>
+                label="Спринт (необязательно)"
+                value={formData.sprintId || null}
+                options={sprints
+                  .filter((sprint) => {
+                    if (!sprint || !sprint.name) {
+                      logger.warn("Пропущен спринт с некорректными данными", { sprint });
+                      return false;
+                    }
+                    if (sprint.id === undefined || sprint.id === null) {
+                      logger.error("У спринта нет ID! API должен возвращать ID согласно документации", { 
+                        sprint,
+                        allSprintKeys: Object.keys(sprint || {})
+                      });
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map((sprint) => ({
+                    value: sprint.id!,
+                    label: sprint.name!,
+                  }))}
+                onChange={(value) => {
+                  const sprintIdValue = value || undefined;
+                  logger.info("Выбран спринт", { sprintIdValue, formData: { ...formData, sprintId: sprintIdValue } });
                   setFormData(prev => ({ 
                     ...prev, 
                     sprintId: sprintIdValue
                   }));
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={sprintsLoading}
-              >
-                <option value="">Не выбран</option>
-                {sprints.map((sprint, index) => {
-                  // Проверяем, что у спринта есть имя и ID
-                  const sprintName = sprint?.name;
-                  const sprintId = sprint?.id;
-                  
-                  if (!sprint || !sprintName) {
-                    logger.warn("Пропущен спринт с некорректными данными", { sprint, index, sprintName });
-                    return null;
-                  }
-                  
-                  // API должен возвращать ID согласно документации
-                  if (sprintId === undefined || sprintId === null) {
-                    logger.error("У спринта нет ID! API должен возвращать ID согласно документации", { 
-                      sprint, 
-                      index, 
-                      sprintName,
-                      allSprintKeys: Object.keys(sprint || {})
-                    });
-                    return null; // Не показываем спринт без ID
-                  }
-                  
-                  return (
-                    <option key={sprintId} value={String(sprintId)}>
-                      {sprintName}
-                    </option>
-                  );
-                })}
-              </select>
+                emptyOptionLabel="Не выбран"
+                placeholder={sprintsLoading ? "Загрузка спринтов..." : "Выберите спринт"}
+              />
               {sprints.length === 0 && !sprintsLoading && (
                 <p className="text-xs text-gray-500 mt-1">В проекте пока нет спринтов</p>
-              )}
-              {sprintsLoading && (
-                <p className="text-xs text-gray-500 mt-1">Загрузка спринтов...</p>
               )}
               {formData.sprintId && (
                 <p className="text-xs text-green-600 mt-1">

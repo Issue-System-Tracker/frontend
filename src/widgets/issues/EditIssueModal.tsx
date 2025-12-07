@@ -10,6 +10,7 @@ import IssueHistoryPanel from './IssueHistoryPanel';
 import { useSprints } from '@/entities/sprint/hooks/useSprints';
 import { ISSUE_TYPE, ISSUE_STATUS } from '@/shared/constants';
 import { logger } from '@/shared/utils/logger';
+import CustomSelect from '@/shared/ui/inputs/CustomSelect';
 
 interface EditIssueModalProps {
   isOpen: boolean;
@@ -188,114 +189,83 @@ export default function EditIssueModal({
           </div>
 
           {/* Тип */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Тип задачи
-            </label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as IssueType)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value={ISSUE_TYPE.FEATURE}>Feature</option>
-              <option value={ISSUE_TYPE.BUG}>Bug</option>
-            </select>
-          </div>
+          <CustomSelect<IssueType>
+            label="Тип задачи"
+            value={type}
+            options={[
+              { value: ISSUE_TYPE.FEATURE, label: "Feature" },
+              { value: ISSUE_TYPE.BUG, label: "Bug" },
+            ]}
+            onChange={(value) => setType(value as IssueType)}
+          />
 
           {/* Статус */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Статус
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as IssueStatus)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value={ISSUE_STATUS.OPEN}>Open</option>
-              <option value={ISSUE_STATUS.IN_PROGRESS}>In Progress</option>
-              <option value={ISSUE_STATUS.TESTING}>Testing</option>
-              <option value={ISSUE_STATUS.DONE}>Done</option>
-            </select>
-          </div>
+          <CustomSelect<IssueStatus>
+            label="Статус"
+            value={status}
+            options={[
+              { value: ISSUE_STATUS.OPEN, label: "Open" },
+              { value: ISSUE_STATUS.IN_PROGRESS, label: "In Progress" },
+              { value: ISSUE_STATUS.TESTING, label: "Testing" },
+              { value: ISSUE_STATUS.DONE, label: "Done" },
+            ]}
+            onChange={(value) => setStatus(value as IssueStatus)}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Исполнитель */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Исполнитель <br /> (необязательно)
-              </label>
-              <select
-                value={assigneeEmail || ""}
-                onChange={(e) => setAssigneeEmail(e.target.value ? e.target.value : undefined)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Не назначен</option>
-                {selectedProject && (
-                  <>
-                    <option value={selectedProject.admin.email}>
-                      {selectedProject.admin.fullName} (Админ)
-                    </option>
-                    {selectedProject.members?.map((member) => (
-                      <option key={member.email} value={member.email}>
-                        {member.fullName}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-            </div>
+            <CustomSelect<string>
+              label="Исполнитель (необязательно)"
+              value={assigneeEmail || null}
+              options={selectedProject ? [
+                { value: selectedProject.admin.email, label: `${selectedProject.admin.fullName} (Админ)` },
+                ...(selectedProject.members
+                  ?.filter((member) => member.email !== selectedProject.admin.email)
+                  .map((member) => ({
+                    value: member.email,
+                    label: member.fullName,
+                  })) || []),
+              ] : []}
+              onChange={(value) => setAssigneeEmail(value || undefined)}
+              emptyOptionLabel="Не назначен"
+              placeholder="Выберите исполнителя"
+            />
 
             {/* Спринт */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Спринт <br /> (необязательно)
-              </label>
-              <select
-                value={sprintId ? String(sprintId) : ""}
-                onChange={(e) => {
-                  const selectedValue = e.target.value;
-                  const sprintIdValue = selectedValue ? parseInt(selectedValue, 10) : null;
-                  logger.info("Выбран спринт в EditIssueModal", { selectedValue, sprintIdValue, issueId: issue?.id });
+              <CustomSelect<number>
+                label="Спринт (необязательно)"
+                value={sprintId || null}
+                options={sprints
+                  .filter((sprint) => {
+                    if (!sprint || !sprint.name) {
+                      logger.warn("Пропущен спринт с некорректными данными", { sprint });
+                      return false;
+                    }
+                    if (sprint.id === undefined || sprint.id === null) {
+                      logger.error("У спринта нет ID! API должен возвращать ID согласно документации", { 
+                        sprint,
+                        allSprintKeys: Object.keys(sprint || {})
+                      });
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map((sprint) => ({
+                    value: sprint.id!,
+                    label: sprint.name!,
+                  }))}
+                onChange={(value) => {
+                  const sprintIdValue = value || null;
+                  logger.info("Выбран спринт в EditIssueModal", { sprintIdValue, issueId: issue?.id });
                   setSprintId(sprintIdValue);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={sprintsLoading}
-              >
-                <option value="">Не выбран</option>
-                {sprints.map((sprint, index) => {
-                  // Проверяем, что у спринта есть имя и ID
-                  const sprintName = sprint?.name;
-                  const sprintId = sprint?.id;
-                  
-                  if (!sprint || !sprintName) {
-                    logger.warn("Пропущен спринт с некорректными данными", { sprint, index, sprintName });
-                    return null;
-                  }
-                  
-                  // API должен возвращать ID согласно документации
-                  if (sprintId === undefined || sprintId === null) {
-                    logger.error("У спринта нет ID! API должен возвращать ID согласно документации", { 
-                      sprint, 
-                      index, 
-                      sprintName,
-                      allSprintKeys: Object.keys(sprint || {})
-                    });
-                    return null; // Не показываем спринт без ID
-                  }
-                  
-                  return (
-                    <option key={`sprint-${sprintId}-${index}`} value={String(sprintId)}>
-                      {sprintName}
-                    </option>
-                  );
-                })}
-              </select>
+                emptyOptionLabel="Не выбран"
+                placeholder={sprintsLoading ? "Загрузка спринтов..." : "Выберите спринт"}
+              />
               {sprints.length === 0 && !sprintsLoading && (
                 <p className="text-xs text-gray-500 mt-1">В проекте пока нет спринтов</p>
-              )}
-              {sprintsLoading && (
-                <p className="text-xs text-gray-500 mt-1">Загрузка спринтов...</p>
               )}
               {sprintId && (
                 <p className="text-xs text-green-600 mt-1">
