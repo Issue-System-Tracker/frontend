@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProjectStore } from '@/entities/project';
 import { useIssueStore } from '@/entities/issue';
 import { Issue, IssueStatus, UpdateIssueData } from '@/entities/issue';
@@ -14,6 +14,16 @@ import Toast from '@/shared/ui/Toast';
 import { logger } from '@/shared/utils/logger';
 import KanbanColumn from './components/KanbanColumn';
 import { TIME_INTERVALS, ERROR_MESSAGES, ISSUE_STATUS } from '@/shared/constants';
+import { WS_ENDPOINTS } from '@/shared/config/api';
+
+type BoardRealtimeMessage = {
+  type: 'ISSUE_STATUS_CHANGED' | 'ISSUE_UPDATED' | 'ISSUE_CREATED';
+  projectId: number;
+  issueId: number;
+  status?: IssueStatus;
+  changedBy?: string;
+  hasNonStatusChanges?: boolean;
+};
 
 export default function KanbanBoard() {
   const { selectedProject } = useProjectStore();
@@ -26,8 +36,17 @@ export default function KanbanBoard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+  const [externalUpdateInfo, setExternalUpdateInfo] = useState<{
+    changedBy?: string;
+    hasNonStatusChanges: boolean;
+    status?: IssueStatus;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<Array<{ id: string; message: string }>>([]);
+  const boardWsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editModalOpenRef = useRef(false);
+  const selectedIssueIdRef = useRef<number | null>(null);
 
   // Функция для добавления ошибки (максимум 3 одновременно)
   const addError = useCallback((message: string) => {
@@ -43,11 +62,22 @@ export default function KanbanBoard() {
     setErrors(prev => prev.filter(e => e.id !== id));
   }, []);
 
-  const loadIssues = useCallback(async () => {
+  useEffect(() => {
+    editModalOpenRef.current = isEditModalOpen;
+  }, [isEditModalOpen]);
+
+  useEffect(() => {
+    selectedIssueIdRef.current = selectedIssue?.id ?? null;
+  }, [selectedIssue]);
+
+  const loadIssues = useCallback(async (options?: { background?: boolean }) => {
     if (!selectedProject) return;
 
+    const background = options?.background ?? false;
     try {
-      setLoading(true);
+      if (!background) {
+        setLoading(true);
+      }
       const issuesData = await fetchIssues(selectedProject.id);
       
       // Обновляем fullName для assignee и creator из данных проекта
@@ -86,10 +116,21 @@ export default function KanbanBoard() {
       });
       
       setIssues(enrichedIssues);
+
+      // Если модалка редактирования открыта, синхронизируем серверный snapshot задачи,
+      // но сам черновик в модалке остается локальным.
+      if (editModalOpenRef.current && selectedIssueIdRef.current !== null) {
+        const refreshedSelectedIssue = enrichedIssues.find((item) => item.id === selectedIssueIdRef.current);
+        if (refreshedSelectedIssue) {
+          setSelectedIssue(refreshedSelectedIssue);
+        }
+      }
     } catch (err) {
       addError(err instanceof Error ? err.message : "Ошибка загрузки задач");
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   }, [selectedProject, setIssues, addError]);
 
@@ -98,6 +139,75 @@ export default function KanbanBoard() {
       loadIssues();
     }
   }, [selectedProject, loadIssues]);
+
+  useEffect(() => {
+    if (!selectedProject) {
+      return;
+    }
+
+    let isUnmounted = false;
+    const connect = () => {
+      const ws = new WebSocket(WS_ENDPOINTS.board(selectedProject.id));
+      boardWsRef.current = ws;
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as BoardRealtimeMessage;
+          if (data?.projectId !== selectedProject.id) {
+            return;
+          }
+
+          const isCurrentlyEditedIssue = isEditModalOpen && selectedIssue?.id === data.issueId;
+          if (isCurrentlyEditedIssue) {
+            if (data.status) {
+              setSelectedIssue((prev) => prev ? { ...prev, status: data.status as IssueStatus } : null);
+              setIssues(issues.map((issue) =>
+                issue.id === data.issueId ? { ...issue, status: data.status as IssueStatus } : issue
+              ));
+            }
+
+            setExternalUpdateInfo({
+              changedBy: data.changedBy,
+              hasNonStatusChanges: Boolean(data.hasNonStatusChanges),
+              status: data.status,
+            });
+
+            // Для кейса с изменением других полей синхронизируем доску с сервером,
+            // но модалка сохраняет локальный черновик.
+            if (data.hasNonStatusChanges) {
+              loadIssues({ background: true });
+            }
+            return;
+          }
+
+          // Любые изменения от других пользователей (создание/редактирование/смена статуса)
+          // должны отражаться на доске в остальных вкладках.
+          loadIssues({ background: true });
+        } catch (error) {
+          logger.warn("Некорректное realtime-сообщение доски", error);
+        }
+      };
+
+      ws.onclose = () => {
+        if (!isUnmounted) {
+          reconnectTimerRef.current = setTimeout(connect, 1500);
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      isUnmounted = true;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+      }
+      if (boardWsRef.current) {
+        boardWsRef.current.close();
+        boardWsRef.current = null;
+      }
+    };
+  }, [selectedProject, loadIssues, isEditModalOpen, selectedIssue, issues, setIssues]);
 
   if (!selectedProject) {
     return (
@@ -138,6 +248,7 @@ export default function KanbanBoard() {
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedIssue(null);
+    setExternalUpdateInfo(null);
   };
 
   const handleIssueClick = (issue: Issue) => {
@@ -169,7 +280,7 @@ export default function KanbanBoard() {
       }
 
       await submitChangeIssueStatus(selectedProject.id, issueId, action);
-      await loadIssues(); // Перезагружаем данные
+      await loadIssues({ background: true }); // Фоновая синхронизация без сброса модалки
     } catch (err) {
       addError(err instanceof Error ? err.message : "Ошибка изменения статуса");
     }
@@ -196,7 +307,7 @@ export default function KanbanBoard() {
       removeIssue(parsedIssueId);
       
       // Перезагружаем список задач для синхронизации
-      await loadIssues();
+      await loadIssues({ background: true });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Ошибка удаления задачи";
       addError(errorMessage);
@@ -213,7 +324,7 @@ export default function KanbanBoard() {
 
     try {
       await submitCreateIssue(selectedProject.id, issueData);
-      await loadIssues(); // Перезагружаем данные
+      await loadIssues({ background: true }); // Фоновая синхронизация без полного лоадера
       handleCloseCreateModal();
     } catch (err) {
       addError(err instanceof Error ? err.message : "Ошибка создания задачи");
@@ -255,7 +366,7 @@ export default function KanbanBoard() {
       if (!existingIssue) {
         // Попробуем перезагрузить задачи, возможно данные устарели
         logger.warn("Задача не найдена в локальном списке, перезагружаем данные...");
-        await loadIssues();
+        await loadIssues({ background: true });
         existingIssue = issues.find(i => i.id === issueId);
         if (!existingIssue) {
           throw new Error(`Задача с ID ${issueId} не найдена в проекте ${projectId}. Возможно, она была удалена.`);
@@ -328,7 +439,7 @@ export default function KanbanBoard() {
       });
 
       await submitUpdateIssue(projectId, issueId, updateData);
-      await loadIssues(); // Перезагружаем данные
+      await loadIssues({ background: true }); // Фоновая синхронизация без сброса редактора
       handleCloseEditModal();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Ошибка обновления задачи";
@@ -410,6 +521,7 @@ export default function KanbanBoard() {
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
         issue={selectedIssue}
+        externalUpdateInfo={externalUpdateInfo}
         onUpdateIssue={handleUpdateIssue}
       />
     </div>

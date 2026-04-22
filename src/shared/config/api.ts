@@ -1,4 +1,5 @@
 export const API_BASE_URL = "http://localhost:8080/api";
+export const WS_BASE_URL = "ws://localhost:8080";
 
 export const ENDPOINTS = {
   auth: {
@@ -33,4 +34,8 @@ export const ENDPOINTS = {
     update: (projectId: number, sprintId: number) => `${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}`,
     delete: (projectId: number, sprintId: number) => `${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}`,
   },
+};
+
+export const WS_ENDPOINTS = {
+  board: (projectId: number) => `${WS_BASE_URL}/ws/board?projectId=${projectId}`,
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Issue, UpdateIssueData, IssueType, IssueStatus } from '@/entities/issue';
 import { useProjectStore } from '@/entities/project';
 import { fetchIssueHistory } from '@/features/issue-management';
@@ -17,6 +17,11 @@ interface EditIssueModalProps {
   onClose: () => void;
   issue: Issue | null;
   projectName?: string;
+  externalUpdateInfo?: {
+    changedBy?: string;
+    hasNonStatusChanges: boolean;
+    status?: IssueStatus;
+  } | null;
   onUpdateIssue: (issueData: UpdateIssueData) => void;
 }
 
@@ -26,6 +31,7 @@ export default function EditIssueModal({
   onClose,
   issue,
   projectName,
+  externalUpdateInfo,
   onUpdateIssue
 }: EditIssueModalProps) {
   const { selectedProject } = useProjectStore();
@@ -39,6 +45,18 @@ export default function EditIssueModal({
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [sprintId, setSprintId] = useState<number | null | undefined>(undefined);
   const [assigneeEmail, setAssigneeEmail] = useState<string | undefined>(undefined);
+  const [statusOnlyWarning, setStatusOnlyWarning] = useState<string | null>(null);
+  const [conflictWarning, setConflictWarning] = useState<string | null>(null);
+  const [initializedIssueId, setInitializedIssueId] = useState<number | null>(null);
+  const [dirtyFields, setDirtyFields] = useState({
+    title: false,
+    description: false,
+    type: false,
+    status: false,
+    sprintId: false,
+    assigneeEmail: false,
+  });
+  const lastServerIssueRef = useRef<Issue | null>(null);
   
   const { sprints, loading: sprintsLoading } = useSprints(selectedProject?.id);
 
@@ -53,18 +71,79 @@ export default function EditIssueModal({
     });
   }, [sprints, sprintsLoading, selectedProject?.id, sprintId]);
 
-  // Обновляем форму при изменении issue
+  // Инициализируем форму только при открытии новой задачи.
+  // Это защищает ввод пользователя от перезаписи при внешних апдейтах.
   useEffect(() => {
-    if (issue) {
+    if (issue && isOpen && initializedIssueId !== issue.id) {
       setTitle(issue.title);
       setDescription(issue.description);
       setType(issue.type);
       setStatus(issue.status);
-      // Согласно документации, API возвращает sprintId в issue
       setSprintId(issue.sprint?.id);
       setAssigneeEmail(issue.assignee?.email);
+      setStatusOnlyWarning(null);
+      setConflictWarning(null);
+      setDirtyFields({
+        title: false,
+        description: false,
+        type: false,
+        status: false,
+        sprintId: false,
+        assigneeEmail: false,
+      });
+      lastServerIssueRef.current = issue;
+      setInitializedIssueId(issue.id);
     }
-  }, [issue]);
+  }, [issue, isOpen, initializedIssueId]);
+
+  useEffect(() => {
+    if (!isOpen || !issue || initializedIssueId !== issue.id || !lastServerIssueRef.current) {
+      return;
+    }
+
+    const previous = lastServerIssueRef.current;
+    const statusChanged = previous.status !== issue.status;
+    const nonStatusChanged = previous.title !== issue.title
+      || previous.description !== issue.description
+      || previous.type !== issue.type
+      || previous.priority !== issue.priority
+      || (previous.assignee?.email ?? null) !== (issue.assignee?.email ?? null)
+      || (previous.sprint?.id ?? null) !== (issue.sprint?.id ?? null);
+
+    if (statusChanged && !dirtyFields.status) {
+      setStatus(issue.status);
+    }
+
+    if (nonStatusChanged) {
+      setConflictWarning("Задача была изменена другим пользователем в других полях. Ваш черновик сохранен локально, при сохранении вы можете перезаписать изменения.");
+      setStatusOnlyWarning(null);
+    } else if (statusChanged) {
+      setStatusOnlyWarning("Статус задачи был изменен другим пользователем. Ваши введенные данные в форме сохранены.");
+      setConflictWarning(null);
+    }
+
+    lastServerIssueRef.current = issue;
+  }, [issue, isOpen, initializedIssueId, dirtyFields.status]);
+
+  useEffect(() => {
+    if (!isOpen || !externalUpdateInfo) {
+      return;
+    }
+
+    const changedByText = externalUpdateInfo.changedBy
+      ? ` (${externalUpdateInfo.changedBy})`
+      : "";
+
+    if (externalUpdateInfo.status && !dirtyFields.status) {
+      setStatus(externalUpdateInfo.status);
+    }
+    if (externalUpdateInfo.hasNonStatusChanges) {
+      setConflictWarning(`Задача была изменена другим пользователем${changedByText}. Ваши изменения сохранены локально, при сохранении можно перезаписать внешние правки.`);
+      setStatusOnlyWarning(null);
+    } else {
+      setStatusOnlyWarning(`Статус задачи был изменен другим пользователем${changedByText}. Остальные введенные вами данные сохранены в форме.`);
+    }
+  }, [externalUpdateInfo, isOpen, dirtyFields.status]);
 
 
   const loadHistory = useCallback(async () => {
@@ -93,6 +172,15 @@ export default function EditIssueModal({
     e.preventDefault();
     if (!issue || !title.trim() || !description.trim()) return;
 
+    if (conflictWarning) {
+      const shouldSave = window.confirm(
+        "Пока вы редактировали, другой пользователь изменил не только статус. Сохранить ваши изменения поверх текущих?"
+      );
+      if (!shouldSave) {
+        return;
+      }
+    }
+
     onUpdateIssue({
       id: issue.id,
       title: title.trim(),
@@ -103,10 +191,22 @@ export default function EditIssueModal({
       assigneeEmail: assigneeEmail
     });
 
-    onClose();
+    handleClose();
   };
 
   const handleClose = () => {
+    setInitializedIssueId(null);
+    setStatusOnlyWarning(null);
+    setConflictWarning(null);
+    setDirtyFields({
+      title: false,
+      description: false,
+      type: false,
+      status: false,
+      sprintId: false,
+      assigneeEmail: false,
+    });
+    lastServerIssueRef.current = null;
     onClose();
   };
 
@@ -158,6 +258,18 @@ export default function EditIssueModal({
 
         {/* Форма */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {statusOnlyWarning && !conflictWarning && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              {statusOnlyWarning}
+            </div>
+          )}
+
+          {conflictWarning && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              {conflictWarning}
+            </div>
+          )}
+
           {/* Название */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -166,7 +278,10 @@ export default function EditIssueModal({
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setDirtyFields((prev) => ({ ...prev, title: true }));
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Введите название задачи"
               required
@@ -180,7 +295,10 @@ export default function EditIssueModal({
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setDirtyFields((prev) => ({ ...prev, description: true }));
+              }}
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               placeholder="Опишите задачу подробно"
@@ -196,7 +314,10 @@ export default function EditIssueModal({
               { value: ISSUE_TYPE.FEATURE, label: "Feature" },
               { value: ISSUE_TYPE.BUG, label: "Bug" },
             ]}
-            onChange={(value) => setType(value as IssueType)}
+            onChange={(value) => {
+              setType(value as IssueType);
+              setDirtyFields((prev) => ({ ...prev, type: true }));
+            }}
           />
 
           {/* Статус */}
@@ -209,7 +330,10 @@ export default function EditIssueModal({
               { value: ISSUE_STATUS.TESTING, label: "Testing" },
               { value: ISSUE_STATUS.DONE, label: "Done" },
             ]}
-            onChange={(value) => setStatus(value as IssueStatus)}
+            onChange={(value) => {
+              setStatus(value as IssueStatus);
+              setDirtyFields((prev) => ({ ...prev, status: true }));
+            }}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -226,7 +350,10 @@ export default function EditIssueModal({
                     label: member.fullName,
                   })) || []),
               ] : []}
-              onChange={(value) => setAssigneeEmail(value || undefined)}
+              onChange={(value) => {
+                setAssigneeEmail(value || undefined);
+                setDirtyFields((prev) => ({ ...prev, assigneeEmail: true }));
+              }}
               emptyOptionLabel="Не назначен"
               placeholder="Выберите исполнителя"
             />
@@ -259,6 +386,7 @@ export default function EditIssueModal({
                   const sprintIdValue = value || null;
                   logger.info("Выбран спринт в EditIssueModal", { sprintIdValue, issueId: issue?.id });
                   setSprintId(sprintIdValue);
+                  setDirtyFields((prev) => ({ ...prev, sprintId: true }));
                 }}
                 disabled={sprintsLoading}
                 emptyOptionLabel="Не выбран"
