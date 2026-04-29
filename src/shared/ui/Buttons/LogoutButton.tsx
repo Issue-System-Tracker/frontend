@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { LogOut } from "lucide-react";
 import { logout } from "@/features/auth";
 
