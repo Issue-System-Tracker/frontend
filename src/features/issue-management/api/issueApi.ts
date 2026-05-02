@@ -1,7 +1,7 @@
 import { ENDPOINTS } from "@/shared/config/api";
 import { apiFetch } from "@/shared/services/apiClient";
 import { logger } from "@/shared/utils/logger";
-import { isRichTextEmpty } from "@/shared/utils/htmlUtils";
+import { isRichTextEmpty, stripEphemeralImagesFromHtml } from "@/shared/utils/htmlUtils";
 import { handleApiError } from "@/shared/utils/errorHandler";
 import { 
   Issue, 
@@ -16,12 +16,21 @@ import {
 // Создание задачи
 export async function createIssue(projectId: number, data: CreateIssueRequest): Promise<void> {
   try {
+    const payload: CreateIssueRequest = {
+      ...data,
+      description: stripEphemeralImagesFromHtml(data.description).trim(),
+    };
+
+    if (!payload.title || isRichTextEmpty(payload.description) || !payload.type) {
+      throw new Error("Обязательные поля не заполнены: title, description, type");
+    }
+
     const res = await apiFetch(ENDPOINTS.issues.create(projectId), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
@@ -29,7 +38,7 @@ export async function createIssue(projectId: number, data: CreateIssueRequest): 
       throw new Error(errorMessage);
     }
     
-    logger.success("Задача успешно создана", { projectId, title: data.title });
+    logger.success("Задача успешно создана", { projectId, title: payload.title });
   } catch (error) {
     logger.error("Ошибка при создании задачи", error);
     throw error;
@@ -87,15 +96,17 @@ export async function updateIssue(projectId: number, issueId: number, data: Upda
     throw new Error(`Некорректные ID: projectId=${projectId}, issueId=${issueId}`);
   }
 
-  // Валидация обязательных полей
-  if (!data.title || isRichTextEmpty(data.description) || !data.type) {
+  const descriptionForApi = stripEphemeralImagesFromHtml(data.description ?? "").trim();
+
+  // Валидация обязательных полей (без незагруженных blob/data-картинок)
+  if (!data.title || isRichTextEmpty(descriptionForApi) || !data.type) {
     throw new Error("Обязательные поля не заполнены: title, description, type");
   }
 
   // Удаляем пустые строки и undefined значения из данных
   const cleanData: Partial<UpdateIssueRequest> & { title: string; description: string; type: IssueType } = {
     title: data.title.trim(),
-    description: data.description.trim(),
+    description: descriptionForApi,
     type: data.type,
   };
 

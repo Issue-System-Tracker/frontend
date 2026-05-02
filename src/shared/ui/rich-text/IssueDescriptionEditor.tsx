@@ -2,10 +2,13 @@
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Underline } from "@tiptap/extension-underline";
 import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, type ReactNode } from "react";
+import Image from "@tiptap/extension-image";
+import { uploadDescriptionImage } from "@/features/issue-management/api/uploadApi";
+import { logger } from "@/shared/utils/logger";
+import { absolutizeUploadUrlsInHtml } from "@/shared/utils/htmlUtils";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Bold,
   Italic,
@@ -16,6 +19,7 @@ import {
   Table2,
   Trash2,
   Plus,
+  Image as ImageIcon,
 } from "lucide-react";
 
 interface IssueDescriptionEditorProps {
@@ -62,19 +66,25 @@ export function IssueDescriptionEditor({
   disabled = false,
   className = "",
 }: IssueDescriptionEditorProps) {
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
       }),
-      Underline,
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+      }),
       TableKit.configure({
         table: { resizable: false },
       }),
       Placeholder.configure({ placeholder }),
     ],
-    content: value,
+    content: absolutizeUploadUrlsInHtml(value),
     editable: !disabled,
     editorProps: {
       attributes: {
@@ -94,8 +104,9 @@ export function IssueDescriptionEditor({
   useEffect(() => {
     if (!editor) return;
     const cur = editor.getHTML();
-    if (value !== cur) {
-      editor.commands.setContent(value, { emitUpdate: false });
+    const normalized = absolutizeUploadUrlsInHtml(value);
+    if (normalized !== cur) {
+      editor.commands.setContent(normalized, { emitUpdate: false });
     }
   }, [value, editor]);
 
@@ -158,6 +169,39 @@ export function IssueDescriptionEditor({
           >
             <ListOrdered size={16} />
           </ToolbarButton>
+          <span className="mx-1 w-px self-stretch bg-gray-200" aria-hidden />
+          <ToolbarButton
+            title="Загрузить картинку на сервер (URL сохранится в описании)"
+            disabled={imageUploading}
+            onClick={() => imageInputRef.current?.click()}
+          >
+            <ImageIcon size={16} />
+          </ToolbarButton>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            className="hidden"
+            aria-hidden
+            tabIndex={-1}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file || !editor) return;
+              try {
+                setImageUploading(true);
+                const url = await uploadDescriptionImage(file);
+                editor.chain().focus().setImage({ src: url }).run();
+              } catch (err) {
+                logger.error("Загрузка изображения", err);
+                window.alert(
+                  err instanceof Error ? err.message : "Не удалось загрузить изображение",
+                );
+              } finally {
+                setImageUploading(false);
+              }
+            }}
+          />
           <span className="mx-1 w-px self-stretch bg-gray-200" aria-hidden />
           <ToolbarButton
             title="Вставить таблицу 3×3"

@@ -26,10 +26,23 @@ export async function handleApiError(
   
   // Для остальных ошибок пытаемся получить сообщение от сервера
   let errorMessage = defaultMessage;
-  
+
   try {
-    const errorData = await response.clone().json();
-    errorMessage = errorData.message || errorData.error || errorMessage;
+    const errorData = (await response.clone().json()) as {
+      message?: string;
+      error?: string;
+      errors?: Record<string, string>;
+    };
+
+    // Spring @Valid: ErrorResponse(message, errors) — детали в errors, а message часто "Validation failed"
+    if (errorData.errors && Object.keys(errorData.errors).length > 0) {
+      const details = Object.entries(errorData.errors)
+        .map(([field, msg]) => `${field}: ${msg}`)
+        .join(" · ");
+      errorMessage = details;
+    } else {
+      errorMessage = errorData.message || errorData.error || errorMessage;
+    }
   } catch {
     try {
       const text = await response.clone().text();

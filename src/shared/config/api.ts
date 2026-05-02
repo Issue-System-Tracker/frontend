@@ -2,6 +2,9 @@ export const API_BASE_URL = "http://localhost:8080/api";
 export const WS_BASE_URL = "ws://localhost:8080";
 
 export const ENDPOINTS = {
+  upload: {
+    image: `${API_BASE_URL}/upload/image`,
+  },
   auth: {
     login: `${API_BASE_URL}/auth/login`,
     register: `${API_BASE_URL}/auth/register`,

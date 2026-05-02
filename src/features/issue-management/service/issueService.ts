@@ -36,7 +36,7 @@ function mapIssueResponse(issue: IssueApiResponse): Issue {
   return {
     id: issue.id,
     title: issue.title,
-    description: issue.description,
+    description: issue.description ?? "",
     type: issue.type || 'BUG', // Если type null, используем BUG по умолчанию
     status: issue.status,
     priority: issue.priority,

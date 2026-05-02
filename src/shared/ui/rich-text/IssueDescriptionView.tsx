@@ -2,6 +2,7 @@
 
 import DOMPurify from "dompurify";
 import { useMemo } from "react";
+import { absolutizeUploadUrlsInHtml } from "@/shared/utils/htmlUtils";
 
 interface IssueDescriptionViewProps {
   html: string;
@@ -15,13 +16,12 @@ export function IssueDescriptionView({
   html,
   className = "",
 }: IssueDescriptionViewProps) {
-  const safe = useMemo(
-    () =>
-      DOMPurify.sanitize(html || "", {
-        USE_PROFILES: { html: true },
-      }),
-    [html],
-  );
+  const safe = useMemo(() => {
+    const resolved = absolutizeUploadUrlsInHtml(html || "");
+    return DOMPurify.sanitize(resolved, {
+      USE_PROFILES: { html: true },
+    });
+  }, [html]);
 
   return (
     <div

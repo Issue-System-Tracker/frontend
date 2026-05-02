@@ -19,6 +19,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@rive-app/react-canvas": "^4.23.4",
+    "@tiptap/extension-image": "^3.22.5",
     "@tiptap/extension-placeholder": "^3.22.5",
     "@tiptap/extension-table": "^3.22.5",
     "@tiptap/extension-underline": "^3.22.5",

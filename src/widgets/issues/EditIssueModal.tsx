@@ -170,9 +170,17 @@ export default function EditIssueModal({
     }
   }, [showHistory, selectedProject, issue, loadHistory]);
 
+  /** Пока стейт описания ещё не заполнен эффектом, редактор монтировался с "" — берём данные с сервера из issue. */
+  const descriptionForEditor = dirtyFields.description
+    ? description
+    : (issue?.description ?? "");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!issue || !title.trim() || isRichTextEmpty(description)) return;
+    const resolvedDescription = dirtyFields.description
+      ? description
+      : (issue?.description ?? "");
+    if (!issue || !title.trim() || isRichTextEmpty(resolvedDescription)) return;
 
     if (conflictWarning) {
       const shouldSave = window.confirm(
@@ -186,7 +194,7 @@ export default function EditIssueModal({
     onUpdateIssue({
       id: issue.id,
       title: title.trim(),
-      description: description.trim(),
+      description: resolvedDescription.trim(),
       type,
       status,
       sprintId: sprintId === undefined ? undefined : (sprintId === null ? null : sprintId),
@@ -297,7 +305,7 @@ export default function EditIssueModal({
             </label>
             <IssueDescriptionEditor
               key={issue ? `issue-desc-${issue.id}` : 'closed'}
-              value={description}
+              value={descriptionForEditor}
               onChange={(html) => {
                 setDescription(html);
                 setDirtyFields((prev) => ({ ...prev, description: true }));

@@ -32,6 +32,21 @@ describe("handleApiError", () => {
     expect(message).toBe("Плохой запрос");
   });
 
+  it("formats Spring validation errors field by field", async () => {
+    const response = new Response(
+      JSON.stringify({
+        message: "Validation failed",
+        errors: {
+          description: "size must be between 1 and 1000",
+        },
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+
+    const message = await handleApiError(response, "Ошибка");
+    expect(message).toBe("description: size must be between 1 and 1000");
+  });
+
   it("falls back to status text for empty response", async () => {
     const response = new Response("", {
       status: 500,
