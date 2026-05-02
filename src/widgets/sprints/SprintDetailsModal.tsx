@@ -1,5 +1,6 @@
 import { Sprint } from '@/entities/sprint';
-import { Issue } from '@/entities/issue'
+import { Issue } from '@/entities/issue';
+import { previewTextFromHtml } from '@/shared/utils/htmlUtils';
 import { X, Calendar, Users, Bug, Zap, AlertCircle } from 'lucide-react';
 
 interface SprintDetailsModalProps {
@@ -183,7 +184,9 @@ export default function SprintDetailsModal({
                           {getIssueTypeIcon(issue.type)}
                           <h4 className="font-medium text-gray-900">{issue.title}</h4>
                         </div>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{issue.description}</p>
+                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                          {previewTextFromHtml(issue.description)}
+                        </p>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           {issue.assignee && (
                             <span>Назначен: {issue.assignee.fullName}</span>

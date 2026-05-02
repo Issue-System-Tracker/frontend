@@ -120,3 +120,70 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* TipTap / описание задачи (HTML + таблицы) */
+.issue-description-editor .tiptap {
+  outline: none;
+}
+
+/* Placeholder (TipTap decoration: class is-empty + data-placeholder) */
+.issue-description-editor .tiptap p.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: oklch(0.556 0 0);
+  pointer-events: none;
+  height: 0;
+}
+
+.issue-description-editor .tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.issue-description-editor .tiptap th,
+.issue-description-editor .tiptap td {
+  border: 1px solid oklch(0.922 0 0);
+  padding: 0.25rem 0.5rem;
+  vertical-align: top;
+}
+
+.issue-description-editor .tiptap th {
+  background: oklch(0.97 0 0);
+  font-weight: 600;
+}
+
+.issue-description-html {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.issue-description-html p {
+  margin: 0.35em 0;
+}
+
+.issue-description-html ul,
+.issue-description-html ol {
+  margin: 0.35em 0;
+  padding-left: 1.25rem;
+}
+
+.issue-description-html table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.issue-description-html th,
+.issue-description-html td {
+  border: 1px solid oklch(0.922 0 0);
+  padding: 0.25rem 0.5rem;
+  vertical-align: top;
+}
+
+.issue-description-html th {
+  background: oklch(0.97 0 0);
+  font-weight: 600;
+}

@@ -5,6 +5,7 @@ import { useIssueStore } from '@/entities/issue';
 import { Issue, IssueStatus, IssueType, Priority } from '@/entities/issue';
 import { Plus, Bug, Zap, AlertCircle, Clock, CheckCircle } from 'lucide-react';
 import { ISSUE_STATUS, ISSUE_TYPE, PRIORITY } from '@/shared/constants';
+import { previewTextFromHtml } from '@/shared/utils/htmlUtils';
 
 const getStatusIcon = (status: IssueStatus) => {
   switch (status) {
@@ -75,7 +76,9 @@ const IssueCard = ({ issue }: { issue: Issue }) => (
       </div>
     </div>
     
-    <p className="text-gray-600 text-sm mb-3 line-clamp-2">{issue.description}</p>
+    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+      {previewTextFromHtml(issue.description)}
+    </p>
     
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">

@@ -1,4 +1,5 @@
 import { Issue, IssueStatus } from '@/entities/issue';
+import { previewTextFromHtml } from '@/shared/utils/htmlUtils';
 import { Trash2 } from 'lucide-react';
 import DateDisplay from './DateDisplay';
 import IssueTypeIcon from './IssueTypeIcon';
@@ -44,7 +45,9 @@ export default function IssueCard({ issue, onClick, onDelete, status }: IssueCar
         </button>
       </div>
 
-      <p className="text-gray-600 text-xs mb-3 line-clamp-2">{issue.description}</p>
+      <p className="text-gray-600 text-xs mb-3 line-clamp-2">
+        {previewTextFromHtml(issue.description)}
+      </p>
 
       <div className="mt-2 text-xs text-gray-500">
         {issue.assignee ? `Назначен: ${issue.assignee.fullName}` : 'Не назначен'}

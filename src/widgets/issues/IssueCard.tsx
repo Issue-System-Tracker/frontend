@@ -1,4 +1,5 @@
 import { Issue, IssueStatus } from "@/entities/issue";
+import { previewTextFromHtml } from "@/shared/utils/htmlUtils";
 import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
 import { Calendar, User, Flag, Bug, Zap } from "lucide-react";
 
@@ -67,7 +68,9 @@ export default function IssueCard({ issue, onEdit, onDelete, onChangeStatus }: I
         </div>
       </div>
 
-      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{issue.description}</p>
+      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+        {previewTextFromHtml(issue.description)}
+      </p>
 
       <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
         {issue.assignee && (

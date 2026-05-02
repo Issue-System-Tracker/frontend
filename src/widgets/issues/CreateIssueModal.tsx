@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { IssueDescriptionEditor } from "@/shared/ui/rich-text";
+import { isRichTextEmpty } from "@/shared/utils/htmlUtils";
 import { useProjectStore } from "@/entities/project";
 import { CreateIssueRequest, IssueType, Priority } from "@/features/issue-management";
 import UniversalButton from "@/shared/ui/Buttons/UniversalButton";
 import TextInput from "@/shared/ui/inputs/TextInput";
-import CustomSelect, { SelectOption } from "@/shared/ui/inputs/CustomSelect";
+import CustomSelect from "@/shared/ui/inputs/CustomSelect";
 import { useSprints } from "@/entities/sprint/hooks/useSprints";
 import { ISSUE_TYPE, PRIORITY } from "@/shared/constants";
 import { logger } from "@/shared/utils/logger";
@@ -31,8 +33,15 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [descriptionMountKey, setDescriptionMountKey] = useState(0);
   
   const { sprints, loading: sprintsLoading } = useSprints(selectedProject?.id);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDescriptionMountKey((k) => k + 1);
+    }
+  }, [isOpen]);
 
   // Отладочный лог для проверки загрузки спринтов
   useEffect(() => {
@@ -47,7 +56,7 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title.trim() || !formData.description.trim()) {
+    if (!formData.title.trim() || isRichTextEmpty(formData.description)) {
       setError("Заполните все обязательные поля");
       return;
     }
@@ -109,7 +118,7 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
 
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">Создать задачу</h2>
         
         {error && (
@@ -142,17 +151,19 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
             />
           </div>
 
-          <TextInput
-            label="Описание задачи"
-            value={formData.description}
-            onChange={(value) => setFormData(prev => ({ ...prev, description: value as string }))}
-            placeholder="Введите описание задачи"
-            required
-            minLength={5}
-            maxLength={1000}
-            multiline
-            rows={4}
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Описание задачи <span className="text-red-500">*</span>
+            </label>
+            <IssueDescriptionEditor
+              key={descriptionMountKey}
+              value={formData.description}
+              onChange={(html) =>
+                setFormData((prev) => ({ ...prev, description: html }))
+              }
+              placeholder="Форматирование, списки и таблицы"
+            />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <CustomSelect<Priority>
@@ -259,7 +270,11 @@ export default function CreateIssueModal({ isOpen, onClose, onSubmit }: CreateIs
             </UniversalButton>
             <UniversalButton
               type="submit"
-              disabled={loading || !formData.title.trim() || !formData.description.trim()}
+              disabled={
+                loading ||
+                !formData.title.trim() ||
+                isRichTextEmpty(formData.description)
+              }
             >
               {loading ? "Создание..." : "Создать задачу"}
             </UniversalButton>

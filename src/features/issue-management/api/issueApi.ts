@@ -1,6 +1,7 @@
 import { ENDPOINTS } from "@/shared/config/api";
 import { apiFetch } from "@/shared/services/apiClient";
 import { logger } from "@/shared/utils/logger";
+import { isRichTextEmpty } from "@/shared/utils/htmlUtils";
 import { handleApiError } from "@/shared/utils/errorHandler";
 import { 
   Issue, 
@@ -87,7 +88,7 @@ export async function updateIssue(projectId: number, issueId: number, data: Upda
   }
 
   // Валидация обязательных полей
-  if (!data.title || !data.description || !data.type) {
+  if (!data.title || isRichTextEmpty(data.description) || !data.type) {
     throw new Error("Обязательные поля не заполнены: title, description, type");
   }
 
